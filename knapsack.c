@@ -27,6 +27,19 @@ void test()
 	if(err == NULL)
 		error_handle("Failed to calculate inverse modulo."); 
 
+
+
+
+
+
+
+
+
+
+
+
+
+
 	//	Print private key info
 	
 	printf("private key:\n");
@@ -79,7 +92,7 @@ void fread_key(FILE **fp, BIGNUM **key, int keysize)
 	while((ch = fgetc(*fp)) != EOF)
 	{
 		if(buffidx > linebuffsize - 2)
-			error_handle("Run out of buffer space for keynumber public key.");
+			error_handle("Run out of buffer space while reading line.");
 
 		if(ch == '\n') {
 
@@ -87,7 +100,7 @@ void fread_key(FILE **fp, BIGNUM **key, int keysize)
 
 			err = BN_hex2bn((key + keyidx), linebuffer);
 			if(err == 0)
-				error_handle("Unknown error reading public key.");
+				error_handle("Unknown error readin line into bignum.");
 
 
 			++keyidx;
