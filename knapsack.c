@@ -8,61 +8,69 @@ void test()
 	BIGNUM *private_key[KEYSIZE] = {NULL};
 	BIGNUM *multiplier = NULL;
 	BIGNUM *modulo = NULL;
-	BIGNUM *modulo_inv = BN_new();
-	//	The variable 'ctx' is reused by function. 
+	BIGNUM *multiplier_inv = BN_new();
+	//	The variable 'ctx' is reused by certain BN_functions.
 	//	Whenever it is required for a function use this variable.
 	BN_CTX *ctx = BN_CTX_new();
 
-	int i;
 
 	
 	FILE *public_key_fp = fopen("public.key", "r");
 	FILE *private_key_fp = fopen("private.key", "r");
+	FILE *cipher_text_fp = stdin;
 
 
 	fread_public_key(public_key_fp, public_key, KEYSIZE);
 	fread_private_key(private_key_fp, private_key, KEYSIZE, &multiplier, &modulo);
 	
-	if( !BN_mod_inverse(modulo_inv, multiplier, modulo, ctx) )
+	if(! BN_mod_inverse(multiplier_inv, multiplier, modulo, ctx))
 		error_handle("Failed to calculate inverse modulo."); 
 
 
-
-
-
-
-
-
-
-
-
-
-	//	Print public key info
-
-	printf("public key:\n");
-	for(i = 0; i < KEYSIZE; ++i) {
-		BN_print_fp(stdout, public_key[i]);
-		putchar('\n');
-	}
-
-	//	Print private key info
-	
-	printf("private key:\n");
-	for(i = 0; i < KEYSIZE; ++i) {
-		BN_print_fp(stdout, private_key[i]);
-		putchar('\n');
-	}
-	printf("multiplier:\n");
-	BN_print_fp(stdout, multiplier);
-		putchar('\n');
-	printf("modulo:\n");
-	BN_print_fp(stdout, modulo);
-		putchar('\n');
-	printf("modulo_inv:\n");
-	BN_print_fp(stdout, modulo_inv);
-		putchar('\n');
+	decrypt(cipher_text_fp, private_key, KEYSIZE, multiplier_inv, modulo, ctx);
 
 	
+}
+void decrypt(FILE *infile, BIGNUM **private_key, int keysize, BIGNUM *multiplier_inv, BIGNUM *modulo, BN_CTX *ctx)
+{
+	BIGNUM *cipher_num = NULL;
+	BIGNUM *message_num = BN_new();
+	char ch;
+
+
+	while(fread_hex_line_into_bignum(infile, &cipher_num) != EOF)
+	{
+
+		BN_mod_mul(message_num, cipher_num, multiplier_inv, modulo, ctx);
+		ch = solve_super_knapsack(private_key, keysize, message_num);
+		putchar(ch);
+	}
+	putchar('\n');
+}
+
+char solve_super_knapsack(BIGNUM **private_key, int keysize, BIGNUM *sum)
+{
+	BIGNUM *zero = BN_new();
+	BIGNUM *tmp = BN_new();
+
+        int i;
+        char mask[] = {1,2,4,8,16,32,64,-128};
+        char letter;
+
+	BN_zero(zero);
+	letter = 0;
+        for(i = keysize; --i >= 0;) {
+
+		BN_sub(tmp, sum, private_key[i]);
+
+                if(BN_cmp(tmp, zero) >= 0) {
+
+                        letter |= mask[i];
+                        BN_copy(sum, tmp);
+                }
+        }
+
+        return letter;
 }
 
 void fread_private_key(FILE *infile, BIGNUM **private_key, int keysize, BIGNUM **multiplier, BIGNUM **modulo)
@@ -89,7 +97,7 @@ void fread_key(FILE *fp, BIGNUM **key, int keysize)
 }
 
 
-void fread_hex_line_into_bignum(FILE *fp, BIGNUM **bn)
+int fread_hex_line_into_bignum(FILE *fp, BIGNUM **bn)
 {
 	int const linebuffsize = 1000;
 	char linebuffer[linebuffsize];
@@ -111,15 +119,16 @@ void fread_hex_line_into_bignum(FILE *fp, BIGNUM **bn)
 
 			err = BN_hex2bn(bn, linebuffer);
 			if(err == 0)
-				error_handle("Unknown error readin line into bignum.");
+				error_handle("Unknown error reading hex line into bignum.");
 
 
-			return;
+			return 0;
 		}
 		linebuffer[buffidx] = ch;
 
 		++buffidx;
 	}
+	return EOF;
 }
 
 void error_handle(char const *str)
