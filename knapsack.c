@@ -14,7 +14,6 @@ void test()
 	BN_CTX *ctx = BN_CTX_new();
 
 	int i;
-	int err;
 
 	
 	FILE *public_key_fp = fopen("public.key", "r");
@@ -23,8 +22,7 @@ void test()
 
 	fread_private_key(private_key_fp, private_key, KEYSIZE, &multiplier, &modulo);
 	
-	err = BN_mod_inverse(modulo_inv, multiplier, modulo, ctx);
-	if(err == NULL)
+	if( !BN_mod_inverse(modulo_inv, multiplier, modulo, ctx) )
 		error_handle("Failed to calculate inverse modulo."); 
 
 
@@ -62,34 +60,40 @@ void test()
 
 void fread_private_key(FILE *infile, BIGNUM **private_key, int keysize, BIGNUM **multiplier, BIGNUM **modulo)
 {
-	fread_key(&infile, multiplier, 1);
-	fread_key(&infile, modulo, 1);
-	fread_key(&infile, private_key, keysize);
+	fread_hex_line_into_bignum(infile, multiplier);
+	fread_hex_line_into_bignum(infile, modulo);
+	fread_key(infile, private_key, keysize);
 }
 
 
 void fread_public_key(FILE *infile, BIGNUM **pubkey, int keysize)
 {
-	fread_key(&infile, pubkey, keysize);
+	fread_key(infile, pubkey, keysize);
 }
 
-/**
-*	FILE **fp so that the state of the file pointer can be retained over several calls.
-*/
-void fread_key(FILE **fp, BIGNUM **key, int keysize)
+
+void fread_key(FILE *fp, BIGNUM **key, int keysize)
+{
+	int idx;
+
+	for(idx = 0; idx < keysize; ++idx) {
+		fread_hex_line_into_bignum(fp, &(key[idx]));
+	}
+}
+
+
+void fread_hex_line_into_bignum(FILE *fp, BIGNUM **bn)
 {
 	int const linebuffsize = 1000;
 	char linebuffer[linebuffsize];
 	char ch;
-	int keyidx;
 	int buffidx;
 	int err;
 
 
-	keyidx = 0;
 	buffidx = 0;
 	err = 0;
-	while((ch = fgetc(*fp)) != EOF)
+	while((ch = fgetc(fp)) != EOF)
 	{
 		if(buffidx > linebuffsize - 2)
 			error_handle("Run out of buffer space while reading line.");
@@ -98,17 +102,12 @@ void fread_key(FILE **fp, BIGNUM **key, int keysize)
 
 			linebuffer[buffidx] = '\0';
 
-			err = BN_hex2bn((key + keyidx), linebuffer);
+			err = BN_hex2bn(bn, linebuffer);
 			if(err == 0)
 				error_handle("Unknown error readin line into bignum.");
 
 
-			++keyidx;
-			buffidx = 0;
-			if(keyidx == keysize)
-				return;
-
-			continue;
+			return;
 		}
 		linebuffer[buffidx] = ch;
 
