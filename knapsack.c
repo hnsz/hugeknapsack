@@ -20,6 +20,7 @@ void test()
 	FILE *private_key_fp = fopen("private.key", "r");
 
 
+	fread_public_key(public_key_fp, public_key, KEYSIZE);
 	fread_private_key(private_key_fp, private_key, KEYSIZE, &multiplier, &modulo);
 	
 	if( !BN_mod_inverse(modulo_inv, multiplier, modulo, ctx) )
@@ -36,7 +37,13 @@ void test()
 
 
 
+	//	Print public key info
 
+	printf("public key:\n");
+	for(i = 0; i < KEYSIZE; ++i) {
+		BN_print_fp(stdout, public_key[i]);
+		putchar('\n');
+	}
 
 	//	Print private key info
 	
