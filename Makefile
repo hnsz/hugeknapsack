@@ -3,7 +3,7 @@ FLAGS=-Wall -pedantic --std=c99
 CFLAGS=$(FLAGS) -c
 OBJS=knapsack.o
 
-main: ks.encrypt ks.decrypt
+main: ks.encrypt ks.decrypt Makefile
 
 ks.encrypt: encrypt.c $(OBJS) -lssl
 	$(CC) $(FLAGS) encrypt.c $(OBJS) -o ks.encrypt -lssl -lcrypto
