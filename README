@@ -6,7 +6,7 @@ make compiles two binaries
 	decrypt.c -> ks.decrypt
 
 use:	./ks.encrypt < plaintext.txt
-	./ks.decrypt < ciphertext.txt
+	./ks.decrypt < cipher.txt
 
 Following things are hardcoded:
 -public key fileptr: 		fopen("public.key",  "r")   	in main() - encrypt.c
