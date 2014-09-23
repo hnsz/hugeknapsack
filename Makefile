@@ -1,4 +1,4 @@
-CC=gcc-4.9
+CC=cc
 FLAGS=-Wall -pedantic --std=c99
 CFLAGS=$(FLAGS) -c
 OBJS=knapsack.o
