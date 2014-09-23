@@ -1,0 +1,22 @@
+/**
+*	NB This code was an exercise.
+*/
+make compiles two binaries
+	encrypt.c -> ks.encrypt
+	decrypt.c -> ks.decrypt
+
+use:	./ks.encrypt < plaintext.txt
+	./ks.decrypt < ciphertext.txt
+
+Following things are hardcoded:
+-public key fileptr: 		fopen("public.key",  "r")   	in main() - encrypt.c
+-private key fileptr: 		fopen("private.key", "r")	in main() - decrypt.c 
+-input stream of message / cipher text: 	stdin 		in main() - encrypt.c, decrypt.c 
+-output stream of message / cipher text: 	stdout 		in encrypt(), decrypt() - knapsack.c
+-the keysize:							in knapsack.c
+	#define KEYSIZE 8 
+	The mask array contains 8 values.
+	All mask operations and input/output are done with chars.
+	(NB larger keysizes will not work currently)
+
+

@@ -2,35 +2,27 @@
 
 #define KEYSIZE 8
 
-void test()
+/*******
+*	User functions
+*/
+void encrypt(FILE *infile, BIGNUM **public_key, int keysize)
 {
-	BIGNUM *public_key[KEYSIZE] = {NULL};
-	BIGNUM *private_key[KEYSIZE] = {NULL};
-	BIGNUM *multiplier = NULL;
-	BIGNUM *modulo = NULL;
-	BIGNUM *multiplier_inv = BN_new();
-	//	The variable 'ctx' is reused by certain BN_functions.
-	//	Whenever it is required for a function use this variable.
-	BN_CTX *ctx = BN_CTX_new();
+	BIGNUM *cipher_num = BN_new();
+	char ch;
 
+
+	while((ch = fgetc(infile)) != EOF) {
+	
+		calc_general_knapsack(cipher_num, public_key, keysize, ch);
+		BN_print_fp(stdout, cipher_num);
+		putchar('\n');
+	}
 
 	
-	FILE *public_key_fp = fopen("public.key", "r");
-	FILE *private_key_fp = fopen("private.key", "r");
-	FILE *cipher_text_fp = stdin;
-
-
-	fread_public_key(public_key_fp, public_key, KEYSIZE);
-	fread_private_key(private_key_fp, private_key, KEYSIZE, &multiplier, &modulo);
-	
-	if(! BN_mod_inverse(multiplier_inv, multiplier, modulo, ctx))
-		error_handle("Failed to calculate inverse modulo."); 
-
-
-	decrypt(cipher_text_fp, private_key, KEYSIZE, multiplier_inv, modulo, ctx);
-
-	
+	BN_free(cipher_num);
 }
+
+
 void decrypt(FILE *infile, BIGNUM **private_key, int keysize, BIGNUM *multiplier_inv, BIGNUM *modulo, BN_CTX *ctx)
 {
 	BIGNUM *cipher_num = NULL;
@@ -43,10 +35,56 @@ void decrypt(FILE *infile, BIGNUM **private_key, int keysize, BIGNUM *multiplier
 
 		BN_mod_mul(message_num, cipher_num, multiplier_inv, modulo, ctx);
 		ch = solve_super_knapsack(private_key, keysize, message_num);
-		putchar(ch);
+		fprintf(stdout, "%c", ch);
 	}
-	putchar('\n');
+	fprintf(stdout, "%c", '\0');
+
+	
+	BN_free(cipher_num);
+	BN_free(message_num);
 }
+
+
+void fread_private_key(FILE *infile, BIGNUM **private_key, int keysize, BIGNUM **multiplier, BIGNUM **modulo)
+{
+	fread_hex_line_into_bignum(infile, multiplier);
+	fread_hex_line_into_bignum(infile, modulo);
+	fread_key(infile, private_key, keysize);
+}
+
+
+void fread_public_key(FILE *infile, BIGNUM **pubkey, int keysize)
+{
+	fread_key(infile, pubkey, keysize);
+}
+
+
+/*******
+*	Internal functions
+*/
+void calc_general_knapsack(BIGNUM *gen_ks, BIGNUM **public_key, int keysize, char ch)
+{
+	BIGNUM *tmp = BN_new();
+        int i;
+        char mask[] = {1,2,4,8,16,32,64,-128};
+	
+
+
+	BN_zero(gen_ks);
+        for(i = 0; i < keysize; ++i) {
+
+                if(ch & mask[i]) {
+			
+			BN_copy(tmp, gen_ks);
+                        BN_add(tmp, gen_ks, public_key[i]);
+			BN_copy(gen_ks, tmp);
+		}
+        }
+
+	BN_free(tmp);
+}
+
+
 
 char solve_super_knapsack(BIGNUM **private_key, int keysize, BIGNUM *sum)
 {
@@ -70,21 +108,14 @@ char solve_super_knapsack(BIGNUM **private_key, int keysize, BIGNUM *sum)
                 }
         }
 
+
+	BN_free(zero);
+	BN_free(tmp);
+
         return letter;
 }
 
-void fread_private_key(FILE *infile, BIGNUM **private_key, int keysize, BIGNUM **multiplier, BIGNUM **modulo)
-{
-	fread_hex_line_into_bignum(infile, multiplier);
-	fread_hex_line_into_bignum(infile, modulo);
-	fread_key(infile, private_key, keysize);
-}
 
-
-void fread_public_key(FILE *infile, BIGNUM **pubkey, int keysize)
-{
-	fread_key(infile, pubkey, keysize);
-}
 
 
 void fread_key(FILE *fp, BIGNUM **key, int keysize)
@@ -128,6 +159,7 @@ int fread_hex_line_into_bignum(FILE *fp, BIGNUM **bn)
 
 		++buffidx;
 	}
+
 	return EOF;
 }
 
